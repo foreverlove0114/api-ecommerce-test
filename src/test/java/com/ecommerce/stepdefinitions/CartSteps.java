@@ -51,6 +51,16 @@ public class CartSteps {
     public void the_user_adds_a_product_to_the_cart() {
         response = apiClient.withSession(sessionId).get("/addToCart?productId=" + productId);
         System.out.println("Add to cart response status: " + response.getStatusCode());
+
+        if(response.getStatusCode() == 302){
+            String location = getLocationHeader(response);
+            System.out.println("Redirecting to " + location);
+
+            Response finalResponse = apiClient.withSession(sessionId).get(location);
+            this.response = finalResponse;
+
+            System.out.println("Final page status: " + finalResponse.getStatusCode());
+        }
     }
 
     @When("the user views the cart")
@@ -61,31 +71,58 @@ public class CartSteps {
     @When("the user removes a product from the cart")
     public void the_user_removes_a_product_from_the_cart() {
         response = apiClient.withSession(sessionId).get("/removeFromCart?productId=" + productId);
+        System.out.println("Remove from cart response: " + response.getStatusCode());
+
+        if(response.getStatusCode() == 302){
+            String location = getLocationHeader(response);
+            System.out.println("Redirecting to " + location);
+
+            Response finalResponse = apiClient.withSession(sessionId).get(location);
+            this.response = finalResponse;
+
+            System.out.println("Final page status: " + finalResponse.getStatusCode());
+        }
     }
 
     @Then("the product should be added successfully")
     public void the_product_should_be_added_successfully() {
+        System.out.println("Valiatation of Items Added");
         int statusCode = response.getStatusCode();
-        Assert.assertTrue(statusCode == 200 || statusCode == 302,
+        Assert.assertTrue(statusCode == 200,
                 "Add to cart should succeed. Status: " + statusCode);
+
+        String responseBody = response.getBody().asString();
+        Assert.assertTrue(responseBody.contains("CART 1"));
+        System.out.println("ResponseBody include CART 1: " + responseBody.contains("CART 1"));
         System.out.println("✓ Product added to cart successfully");
     }
 
     @Then("the cart should be accessible")
     public void the_cart_should_be_accessible() {
         Assert.assertEquals(response.getStatusCode(), 200);
+        String responseBody = response.getBody().asString();
+        Assert.assertTrue(responseBody.contains("Proceed to checkout"));
+        System.out.println("ResponseBody includes Proceed to checkout: " + responseBody.contains("Proceed to checkout"));
         System.out.println("✓ Cart page accessible");
     }
 
     @Then("the cart should be empty")
     public void the_cart_should_be_empty() {
         Assert.assertEquals(response.getStatusCode(), 200);
+        String ResponseBody = response.getBody().asString();
+
+        System.out.println(ResponseBody.contains("$0"));
+        Assert.assertTrue(ResponseBody.contains("$0"));
         System.out.println("✓ Empty cart verified");
     }
 
     @Then("the product should be removed successfully")
     public void the_product_should_be_removed_successfully() {
         Assert.assertEquals(response.getStatusCode(), 200);
+        String ResponseBody = response.getBody().asString();
+        System.out.println("ResponseBody includes CART 0: " + ResponseBody.contains("CART 0"));
+        Assert.assertTrue(ResponseBody.contains("CART 0"));
+
         System.out.println("✓ Product removed successfully");
     }
 
@@ -96,7 +133,16 @@ public class CartSteps {
 
     @Then("the user should be redirected to login")
     public void the_user_should_be_redirected_to_login() {
+        if(response.getStatusCode() == 302){
+            String location = getLocationHeader(response);
+            System.out.println("Redirecting to: " + location);
+
+            Response redirectResponse = apiClient.get(location);
+            this.response = redirectResponse;
+        }
         Assert.assertEquals(response.getStatusCode(), 200);
+        String responseBody = response.getBody().asString();
+        Assert.assertTrue(responseBody.contains("Register here"));
         System.out.println("✓ Unauthorized access handled correctly");
     }
 
@@ -117,5 +163,16 @@ public class CartSteps {
         Response registerResponse = apiClient.post("/register", registerParams);
         Assert.assertTrue(registerResponse.getStatusCode() == 200 ||
                 registerResponse.getStatusCode() == 302);
+    }
+
+    private String getLocationHeader(Response response) {
+        // 处理header名称大小写不敏感的问题
+        io.restassured.http.Headers headers = response.getHeaders();
+        for (io.restassured.http.Header header : headers) {
+            if ("location".equalsIgnoreCase(header.getName())) {
+                return header.getValue();
+            }
+        }
+        return null;
     }
 }

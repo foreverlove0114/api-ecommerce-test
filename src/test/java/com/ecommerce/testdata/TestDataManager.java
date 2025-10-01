@@ -21,18 +21,18 @@ public class TestDataManager {
         return user;
     }
 
-    public static User getUpdatedUser() {
-        User user = new User();
-        user.setEmail(TestConfig.TestUser.EMAIL);
-        user.setFirstName("JieXiang");
-        user.setLastName("Yu");
-        user.setAddress1("Yong");
-        user.setAddress2("Peng");
-        user.setZipcode("83700");
-        user.setCity("Yong Peng");
-        user.setState("Johor");
-        user.setCountry("Malaysia");
-        user.setPhone("011101111");
-        return user;
-    }
+//    public static User getUpdatedUser() {
+//        User user = new User();
+//        user.setEmail(TestConfig.TestUser.EMAIL);
+//        user.setFirstName("JieXiang");
+//        user.setLastName("Yu");
+//        user.setAddress1("Yong");
+//        user.setAddress2("Peng");
+//        user.setZipcode("83700");
+//        user.setCity("Yong Peng");
+//        user.setState("Johor");
+//        user.setCountry("Malaysia");
+//        user.setPhone("011101111");
+//        return user;
+//    }
 }

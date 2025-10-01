@@ -25,7 +25,7 @@ public class ApiClient {
                 .config(config)
                 .contentType(ContentType.URLENC)
                 .accept(ContentType.HTML)
-                .redirects().follow(true)  // 允许重定向
+                .redirects().follow(false)  // 不自动跟随重定向
                 .urlEncodingEnabled(true);  // 启用URL编码
     }
 

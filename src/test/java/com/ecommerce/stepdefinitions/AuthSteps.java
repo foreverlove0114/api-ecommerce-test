@@ -99,9 +99,8 @@ public class AuthSteps {
         System.out.println("Profile page contains user info: " +
                 profileBody.toLowerCase().contains("profile"));
 
-        boolean profileAccessible = profileBody.contains("Profile") ||
-                profileBody.contains("profile") ||
-                profileBody.contains("View Profile") ||
+        boolean profileAccessible = profileBody.contains("Profile") &&
+                profileBody.contains("View Profile") &&
                 profileBody.contains("Edit Profile");
 
         Assert.assertTrue(profileAccessible, "Profile page should be accessible to logged-in user");
@@ -123,149 +122,150 @@ public class AuthSteps {
     @Then("the login should be successful")
     public void the_login_should_be_successful() {
         System.out.println("=== LOGIN VERIFICATION ===");
-        System.out.println("Status code: " + response.getStatusCode());
+        System.out.println("Initial status code: " + response.getStatusCode());
 
-        String responseBody = response.getBody().asString();
-        System.out.println("Response length: " + responseBody.length());
+        // 🎯 核心修复：手动跟随重定向
+        Response finalResponse = response;
 
-        // 调试信息：检查响应中包含的关键词
-        System.out.println("Contains 'Welcome': " + responseBody.contains("Welcome"));
-        System.out.println("Contains 'My Account': " + responseBody.contains("My Account"));
-        System.out.println("Contains 'Logout': " + responseBody.contains("Logout"));
-        System.out.println("Contains 'Home': " + responseBody.contains("Home"));
-        System.out.println("Contains 'session': " + responseBody.contains("session"));
-        System.out.println("Contains 'firstName': " + responseBody.contains("firstName"));
+        if (response.getStatusCode() == TestConfig.StatusCode.REDIRECT) {
+            String location = getLocationHeader(response);
+            System.out.println("Redirecting to: " + location);
 
-        // 打印响应内容的关键部分
-        if (responseBody.length() > 200) {
-            System.out.println("First 200 chars: " + responseBody.substring(0, 200));
+            // 🎯 关键：手动访问重定向目标
+            finalResponse = apiClient.withSession(sessionId).get(location);
+            System.out.println("Final status code after redirect: " + finalResponse.getStatusCode());
         }
 
-        Assert.assertEquals(response.getStatusCode(), TestConfig.StatusCode.REDIRECT,
-                "Login should return status 200, but got: " + response.getStatusCode());
+        // 🎯 现在检查的是最终页面的内容，不是重定向页面
+        String finalResponseBody = finalResponse.getBody().asString();
+        System.out.println("Final response length: " + finalResponseBody.length());
 
+        boolean hasWelcome = finalResponseBody.contains("Welcome");
+        boolean hasLogout = finalResponseBody.contains("Sign Out");
+        boolean hasMyAccount = finalResponseBody.contains("My Account");
+
+        System.out.println("Contains 'Welcome': " + hasWelcome);
+        System.out.println("Contains 'Sign Out': " + hasLogout);
+
+        // 验证逻辑
         Assert.assertNotNull(sessionId, "Session cookie should be set after login");
+        Assert.assertFalse(sessionId.isEmpty(), "Session cookie should not be empty");
 
-        // 更灵活的登录成功验证
-        boolean loginSuccess = responseBody.contains("Welcome") ||
-                responseBody.contains("My Account") ||
-                responseBody.contains("Logout") ||
-                (sessionId != null && !sessionId.isEmpty()) ||
-                responseBody.toLowerCase().contains("home");
+        boolean loginSuccess = hasWelcome && hasLogout;
+        Assert.assertTrue(loginSuccess, "Should show logged-in indicators on the final page");
 
-        if (!loginSuccess) {
-            System.out.println("=== FULL RESPONSE FOR DEBUGGING ===");
-            System.out.println(responseBody);
-        }
-
-        Assert.assertTrue(loginSuccess, "Login should be successful - check session and page content");
         System.out.println("✓ Login successful");
     }
-
-//    @Then("the login should fail")
-//    public void the_login_should_fail() {
-//        System.out.println("=== LOGIN FAILURE VERIFICATION ===");
-//        System.out.println("Status code: " + response.getStatusCode());
-//
-//        String responseBody = response.getBody().asString();
-//        System.out.println("Contains 'Invalid': " + responseBody.contains("Invalid"));
-//        System.out.println("Contains 'invalid': " + responseBody.toLowerCase().contains("invalid"));
-//        System.out.println("Contains 'Error': " + responseBody.contains("Error"));
-//        System.out.println("Contains 'error': " + responseBody.toLowerCase().contains("error"));
-//        System.out.println("Contains 'Login': " + responseBody.contains("Login"));
-//
-//        Assert.assertEquals(response.getStatusCode(), TestConfig.StatusCode.REDIRECT);
-//
-//        // 更灵活的失败验证
-//        boolean loginFailed = responseBody.contains("Invalid") ||
-//                responseBody.toLowerCase().contains("invalid") ||
-//                responseBody.contains("Error") ||
-//                responseBody.toLowerCase().contains("error") ||
-//                responseBody.contains("Login") && !responseBody.contains("My Account");
-//
-//        if (!loginFailed) {
-//            System.out.println("=== FULL RESPONSE FOR DEBUGGING ===");
-//            System.out.println(responseBody);
-//        }
-//
-//        Assert.assertTrue(loginFailed, "Should show login failure message");
-//        System.out.println("✓ Login failure handled correctly");
-//    }
 
     @Then("the login should fail")
     public void the_login_should_fail() {
         System.out.println("=== LOGIN FAILURE VERIFICATION ===");
         System.out.println("Status code: " + response.getStatusCode());
 
-        // 方案1：检查重定向响应本身
+        // 🎯 核心修正：验证用户实际上没有登录，而不是session不存在
+        String sessionAfterFailedLogin = apiClient.extractSessionCookie(response);
+        System.out.println("Session detected: " + (sessionAfterFailedLogin != null));
+
+        boolean loginFailed = false;
+        String failureReason = "";
+
         if (response.getStatusCode() == TestConfig.StatusCode.REDIRECT) {
-            System.out.println("Login failed with redirect to: " + response.getHeader("Location"));
+            String location = getLocationHeader(response);
+            System.out.println("Redirects to: " + location);
 
-            // 方案2：检查session cookie是否未设置（登录失败时不应该有session）
-            String sessionAfterFailedLogin = apiClient.extractSessionCookie(response);
-            boolean noSessionSet = sessionAfterFailedLogin == null || sessionAfterFailedLogin.isEmpty();
+            // 访问重定向目标验证实际登录状态
+            Response finalResponse = apiClient.withSession(sessionAfterFailedLogin).get(location);
+            String finalBody = finalResponse.getBody().asString();
 
-            System.out.println("Session after failed login: " + (noSessionSet ? "Not set" : "Unexpectedly set"));
+            boolean showsLoggedIn = finalBody.contains("Logout") &&
+                    finalBody.contains("Welcome, ");
 
-            // 方案3：访问登录页面检查是否有错误信息
-            Response loginPageResponse = apiClient.get("/loginForm");
-            String loginBody = loginPageResponse.getBody().asString();
+            System.out.println("Actually logged in: " + showsLoggedIn);
 
-            // 更灵活的验证：登录失败的表现可以是多种形式
-            boolean loginFailed = noSessionSet || // 没有设置session
-                    loginBody.contains("Invalid") || // 登录页面显示错误
-                    response.getHeader("Location") != null; // 有重定向
-
-            Assert.assertTrue(loginFailed, "Login should fail - no session should be set");
-            System.out.println("✓ Login failure handled correctly - no session set");
+            // 🎯 登录失败 = 不显示已登录状态
+            loginFailed = !showsLoggedIn;
+            if (!loginFailed) failureReason = "User appears to be logged in despite wrong password";
 
         } else {
-            // 如果不是重定向，检查页面内容
+            // 直接返回错误信息
             String responseBody = response.getBody().asString();
-            boolean loginFailed = responseBody.contains("Invalid") ||
-                    responseBody.contains("invalid");
+            boolean showsError = responseBody.contains("Invalid") &&
+                    responseBody.toLowerCase().contains("invalid");
 
-            Assert.assertTrue(loginFailed, "Login page should show error message");
-            System.out.println("✓ Login failure handled correctly - error message shown");
+            System.out.println("Shows error message: " + showsError);
+
+            loginFailed = showsError;
+            if (!loginFailed) failureReason = "No error message shown for failed login";
         }
+
+        Assert.assertTrue(loginFailed, "Login should fail: " + failureReason);
+        System.out.println("✓ Login correctly failed");
     }
 
     @When("the user logs out")
     public void the_user_logs_out() {
-        System.out.println("=== LOGOUT ===");
-        System.out.println("Session before logout: " + sessionId);
+        System.out.println("=== LOGOUT PROCESS ===");
+        System.out.println("Session before logout: " +
+                (sessionId != null ? sessionId.substring(0, Math.min(10, sessionId.length())) + "..." : "null"));
 
+        // 🎯 关键修改：确保登出请求正确发送
         response = apiClient.withSession(sessionId).get("/logout");
+
         System.out.println("Logout status: " + response.getStatusCode());
+        System.out.println("Logout response headers: " + response.getHeaders());
+
+        // 🎯 提取登出后的session（可能被清除）
+        String newSession = apiClient.extractSessionCookie(response);
+        System.out.println("Session after logout request: " +
+                (newSession != null ? "CHANGED: " + newSession.substring(0, Math.min(10, newSession.length())) + "..." : "CLEARED"));
+
+        // 🎯 重要：更新sessionId为登出后的状态
+        if (newSession == null) {
+            sessionId = null;  // session被清除
+        }
     }
 
     @Then("the user should be logged out")
     public void the_user_should_be_logged_out() {
         System.out.println("=== LOGOUT VERIFICATION ===");
-        Assert.assertEquals(response.getStatusCode(), TestConfig.StatusCode.OK);
 
-        // 检查登出后的首页
-        Response homeResponse = apiClient.get("/");
+        // 🎯 第一步：验证登出响应
+        Assert.assertEquals(response.getStatusCode(), TestConfig.StatusCode.REDIRECT,
+                "Logout should trigger redirect");
+
+        String location = getLocationHeader(response);
+        System.out.println("Redirects to: " + location);
+
+        // 🎯 第二步：使用新的API客户端（无session）访问首页
+        ApiClient freshClient = new ApiClient();  // 全新的客户端，无session
+        Response homeResponse = freshClient.get("/");
+
         String homeBody = homeResponse.getBody().asString();
+        System.out.println("Home page status with fresh client: " + homeResponse.getStatusCode());
 
-        System.out.println("Home page contains 'Login': " + homeBody.contains("Login"));
-        System.out.println("Home page contains 'Register': " + homeBody.contains("Register"));
-        System.out.println("Home page contains 'My Account': " + homeBody.contains("My Account"));
-        System.out.println("Home page contains 'Logout': " + homeBody.contains("Logout"));
+        // 🎯 第三步：验证显示未登录状态
+        boolean showsLogin = homeBody.contains("Login") ||
+                homeBody.contains("Sign In") ||
+                homeBody.contains("Register");
+        boolean showsUserMenu = homeBody.contains("Hello,") ||
+                homeBody.contains("Your profile") ||
+                homeBody.contains("Sign Out");
 
-        // 更灵活的登出验证
-        boolean loggedOut = homeBody.contains("Login") ||
-                homeBody.contains("Register") ||
-                !homeBody.contains("My Account") ||
-                !homeBody.contains("Logout");
+        System.out.println("Shows login options: " + showsLogin);
+        System.out.println("Shows user menu: " + showsUserMenu);
 
-        if (!loggedOut) {
-            System.out.println("=== HOME PAGE RESPONSE ===");
-            System.out.println(homeBody);
-        }
+        // 🎯 第四步：验证不能访问受保护页面
+        Response profileResponse = freshClient.get("/account/profile");
+        boolean canAccessProtected = profileResponse.getStatusCode() == 200;
+        System.out.println("Can access protected page: " + canAccessProtected);
 
-        Assert.assertTrue(loggedOut, "Should show login/register options after logout");
-        System.out.println("✓ Logout successful");
+        // 🎯 综合验证：应该显示登录选项，不能访问受保护页面
+        boolean logoutSuccess = showsLogin && !showsUserMenu && !canAccessProtected;
+
+        Assert.assertTrue(logoutSuccess,
+                "After logout: should show login options, hide user menu, and block protected pages");
+
+        System.out.println("✓ Logout successful - session properly cleared");
     }
 
     // 辅助方法
@@ -283,5 +283,16 @@ public class AuthSteps {
         params.put("country", user.getCountry());
         params.put("phone", user.getPhone());
         return params;
+    }
+
+    private String getLocationHeader(Response response) {
+        // 处理header名称大小写不敏感的问题
+        io.restassured.http.Headers headers = response.getHeaders();
+        for (io.restassured.http.Header header : headers) {
+            if ("location".equalsIgnoreCase(header.getName())) {
+                return header.getValue();
+            }
+        }
+        return null;
     }
 }
