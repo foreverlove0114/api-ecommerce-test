@@ -1,6 +1,11 @@
 package com.ecommerce.models;
 
+/**
+ * 🧑‍💼 用户模型类 - 代表电商系统中的用户实体
+ * 这个类封装了用户的所有基本信息，用于测试数据的管理和传递
+ */
 public class User {
+    // 📝 用户属性定义 - 使用private封装保证数据安全
     private String email;
     private String password;
     private String firstName;
@@ -13,19 +18,34 @@ public class User {
     private String country;
     private String phone;
 
-    // Constructors
-    public User() {}
+    /**
+     * 🔧 默认构造器 - 创建空用户对象
+     * 用途：当需要逐步设置用户属性时使用
+     * 示例：User user = new User(); user.setEmail("test@example.com");
+     */
+    public User(){}
 
-    public User(String email, String password, String firstName, String lastName) {
+    /**
+     * 🔧 带参数构造器 - 快速创建基本用户信息
+     * 用途：注册或登录时只需要基本信息的场景
+     * @param email 用户邮箱
+     * @param password 用户密码
+     * @param firstName 名字
+     * @param lastName 姓氏
+     */
+    public User(String email, String password, String firstName, String lastName){
+        // 🎯 使用this区分成员变量和参数
         this.email = email;
         this.password = password;
         this.firstName = firstName;
         this.lastName = lastName;
     }
 
-    // Getters and Setters
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    // 🔄 Getter和Setter区域 - 提供受控的属性访问
+    // 📤 Getter - 从对象中"获取"数据
+    public String getEmail() { return email; } // 🎯 返回String类型的数据
+    // 📥 Setter - 向对象中"设置"数据
+    public void setEmail(String email) { this.email = email; }// 🎯 不返回任何数据（void）
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }

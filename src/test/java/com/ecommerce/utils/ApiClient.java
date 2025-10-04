@@ -9,69 +9,86 @@ import io.restassured.specification.RequestSpecification;
 
 import java.util.Map;
 
+/**
+ * 🛠️ HTTP客户端封装类 - 测试框架的"通信专家"
+ * 职责：封装所有HTTP请求细节，提供简洁易用的API给测试步骤使用
+ */
 public class ApiClient {
+
+    /**
+     * 📝 HTTP请求规范对象 - 所有请求的配置基础
+     * 包含认证信息、超时设置、内容类型等通用配置
+     */
     private RequestSpecification request;
 
-    public ApiClient() {
+    /**
+     * 🏗️ 构造函数 - 初始化HTTP客户端配置
+     * 设置所有请求的通用参数，确保一致性
+     */
+    public ApiClient(){
+        // 🌐 设置基础URL - 所有请求的起点
         RestAssured.baseURI = TestConfig.BASE_URL;
 
-        // 正确配置timeout的方法
+        // ⏱️ 配置超时设置 - 防止请求无限期挂起
         RestAssuredConfig config = RestAssuredConfig.config()
                 .httpClient(HttpClientConfig.httpClientConfig()
-                        .setParam("http.connection.timeout", TestConfig.TIMEOUT)
-                        .setParam("http.socket.timeout", TestConfig.TIMEOUT));
+                        .setParam("http.connection.timeout", TestConfig.TIMEOUT)  // 🔌 连接建立超时
+                        .setParam("http.socket.timeout", TestConfig.TIMEOUT));    // 📡 数据传输超时
 
         this.request = RestAssured.given()
                 .config(config)
                 .contentType(ContentType.URLENC)
                 .accept(ContentType.HTML)
-                .redirects().follow(false)  // 不自动跟随重定向
-                .urlEncodingEnabled(true);  // 启用URL编码
+                .redirects().follow(false)
+                .urlEncodingEnabled(true);
     }
 
-    public ApiClient withSession(String sessionId) {
-        if (sessionId != null && !sessionId.isEmpty()) {
-            this.request = request.cookie("session", sessionId);
+    /**
+     * 🔐 会话管理 - 为请求添加Session Cookie
+     * 实现链式调用，方便连续设置多个参数
+     *
+     * @param sessionId 会话ID，登录后获得的身份凭证
+     * @return ApiClient 返回当前对象，支持链式调用
+     */
+
+    public ApiClient withSession(String sessionId){
+        if(sessionId != null && !sessionId.isEmpty()){
+            // 🍪 添加Session Cookie到请求头
+            this.request = request.cookie("session",sessionId);
         }
-        return this;
+
+        return this;// 🔗 返回this支持链式调用：apiClient.withSession(...).get(...)
     }
 
-    public Response get(String endpoint) {
+    /**
+     * 📨 GET请求 - 发送HTTP GET请求
+     *
+     * @param endpoint 请求端点（不包含基础URL）
+     * @return Response HTTP响应对象
+     */
+    public Response get(String endpoint){
         return request.get(endpoint);
     }
 
-    public Response post(String endpoint, Map<String, String> formParams) {
+    /**
+     * 📨 POST请求 - 发送带表单数据的HTTP POST请求
+     *
+     * @param 'endpoint' 请求端点
+     * @param 'formParams' 表单参数键值对
+     * @return Response HTTP响应对象
+     */
+    public Response post(String endpoint, Map<String,String> formParams){
         return request.formParams(formParams).post(endpoint);
     }
 
-    public String extractSessionCookie(Response response) {
+    /**
+     * 🍪 提取Session Cookie - 从HTTP响应中获取会话标识
+     * 主要用于登录后提取session供后续请求使用
+     *
+     * @param response HTTP响应对象
+     * @return String session cookie值，如果不存在返回null
+     */
+    public String extractSessionCookie(Response response){
         return response.getCookie("session");
-    }
-
-    public static String extractProductIdFromResponse(Response response) {
-        // 简化实现 - 从响应中查找商品ID
-        String body = response.getBody().asString();
-
-        // 尝试从HTML中解析商品ID
-        if (body.contains("productId=")) {
-            int startIndex = body.indexOf("productId=") + 10;
-            int endIndex = body.indexOf("'", startIndex);
-            if (endIndex == -1) endIndex = body.indexOf("\"", startIndex);
-            if (endIndex == -1) endIndex = body.indexOf("&", startIndex);
-            if (endIndex == -1) endIndex = Math.min(startIndex + 5, body.length());
-
-            if (endIndex > startIndex) {
-                return body.substring(startIndex, endIndex);
-            }
-        }
-
-        // 默认返回一个存在的商品ID
-        return "1";
-    }
-
-    // 添加一个方法来检查登录状态
-    public boolean isLoggedIn(Response response) {
-        String body = response.getBody().asString();
-        return body.contains("My Account") || body.contains("Logout") || body.contains("Welcome");
     }
 }
