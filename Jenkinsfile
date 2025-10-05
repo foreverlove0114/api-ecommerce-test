@@ -1,7 +1,17 @@
 pipeline {
     agent any
     triggers {
-            cron('H */4 * * 1-5')
+            // 代码推送触发：每2分钟检查一次代码是否有变更:cite[8]
+            pollSCM('H/2 * * * *')
+            // 定时构建触发：在北京时间每周一至周五上午8点到下午6点，每4小时的第45分钟构建一次:cite[4]
+            cron('45 0-10/4 * * 1-5') // 注意：Jenkins默认使用UTC时间
+        }
+        stages {
+            stage('Example Build') {
+                steps {
+                    echo 'Hello, World!'
+                }
+            }
         }
 
     tools {
