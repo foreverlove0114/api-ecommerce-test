@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    triggers {
+            cron('H */4 * * 1-5')
+        }
 
     tools {
         maven 'M3'
@@ -66,7 +69,7 @@ parameters {
     )
 }
 
-triggers {
-    pollSCM('H/5 * * * *')  // 每5分钟检查代码变更
-    cron('0 2 * * *')       // 每天凌晨2点执行
-}
+// triggers {
+//     pollSCM('H/5 * * * *')  // 每5分钟检查代码变更
+//     cron('0 2 * * *')       // 每天凌晨2点执行
+// }
