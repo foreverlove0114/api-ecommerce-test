@@ -1,36 +1,40 @@
 pipeline {
-    agent any
+    agent any // 在任何可用的Jenkins节点上运行
 
+    // 2. 构建参数（用户输入）
     parameters {
-        choice(
+        choice( // 下拉选择框
             name: 'BASE_URL',
             choices: ['http://localhost:5000/', 'http://staging.example.com/', 'http://prod.example.com/'],
             description: 'Target environment'
         )
-        string(
+        string(   // 文本输入框
             name: 'TIMEOUT',
             defaultValue: '10000',
             description: 'Request timeout in milliseconds'
         )
-        booleanParam(
+        booleanParam( // 复选框
             name: 'RUN_IN_PARALLEL',
             defaultValue: false,
             description: 'Run tests in parallel'
         )
     }
 
+ // 3. 自动触发条件
     triggers {
         // 代码推送触发：每2分钟检查一次代码是否有变更
-        pollSCM('H/2 * * * *')
+        pollSCM('H/15 * * * *')
         // 定时构建触发：在北京时间每周一至周五上午8点到下午6点，每4小时的第45分钟构建一次
         cron('45 0-10/4 * * 1-5') // 注意：Jenkins默认使用UTC时间
     }
 
+// 4. 工具配置
     tools {
-        maven 'M3'
-        jdk 'JDK11'
+        maven 'M3' // 使用Jenkins中配置的Maven
+        jdk 'JDK11' // 使用Jenkins中配置的JDK11
     }
 
+   // 5. 环境变量
     environment {
         // 使用参数化构建中的参数
         BASE_URL = "${params.BASE_URL}"
@@ -38,6 +42,7 @@ pipeline {
         RUN_IN_PARALLEL = "${params.RUN_IN_PARALLEL}"
     }
 
+    // 6. 构建阶段
     stages {
         stage('Checkout') {
             steps {
@@ -81,6 +86,7 @@ pipeline {
         }
     }
 
+    // 7. 构建后处理
     post {
         always {
             publishHTML([
