@@ -58,14 +58,17 @@ pipeline {
 
         stage('Test') {
             steps {
-                script {
-                    if (env.RUN_IN_PARALLEL == 'true') {
-                        bat 'mvn test -Dtest.parallel=true'
-                    } else {
-                        bat "mvn test -Dbase.url=${BASE_URL} -Dtimeout=${TIMEOUT}"
+                    script {
+                        // 构建Maven命令参数
+                        def mavenCommand = "mvn test -Dbase.url=${BASE_URL} -Dtimeout=${TIMEOUT}"
+
+                        if (env.RUN_IN_PARALLEL == 'true') {
+                            bat "${mavenCommand} -Dtest.parallel=true"
+                        } else {
+                            bat "${mavenCommand}"
+                        }
                     }
                 }
-            }
             post {
                 always {
                     cucumber reportTitle: 'Cucumber Report',
@@ -78,9 +81,9 @@ pipeline {
         stage('Example Build') {
             steps {
                 echo 'Hello, World!'
-                echo "Testing against: ${BASE_URL}"
-                echo "Timeout: ${TIMEOUT}ms"
-                echo "Parallel execution: ${RUN_IN_PARALLEL}"
+                echo "Testing against: ${BASE_URL}"      // 显示: http://staging.example.com/
+                echo "Timeout: ${TIMEOUT}ms"            // 显示: 15000ms
+                echo "Parallel execution: ${RUN_IN_PARALLEL}" // 显示: false
             }
         }
     }
