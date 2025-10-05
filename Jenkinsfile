@@ -62,7 +62,7 @@ pipeline {
                     if (env.RUN_IN_PARALLEL == 'true') {
                         bat 'mvn test -Dtest.parallel=true'
                     } else {
-                        bat 'mvn test'
+                        bat "mvn test -Dbase.url=${BASE_URL} -Dtimeout=${TIMEOUT}"
                     }
                 }
             }
