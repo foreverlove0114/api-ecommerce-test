@@ -6,28 +6,23 @@ pipeline {
         jdk 'JDK11'
     }
 
-    environment {
-        BASE_URL = 'http://localhost:5000/'
-        TIMEOUT = '10000'
-    }
-
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/your-username/your-ecommerce-test-project.git'
+                    url: 'https://github.com/foreverlove0114/api-ecommerce-test'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'mvn clean compile'
+                bat 'mvn clean compile'  // Windows 使用 bat
             }
         }
 
         stage('Test') {
             steps {
-                sh 'mvn test'
+                bat 'mvn test'
             }
             post {
                 always {
@@ -37,34 +32,18 @@ pipeline {
                 }
             }
         }
-
-        stage('Reports') {
-            steps {
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'target/cucumber-reports',
-                    reportFiles: 'cucumber.html',
-                    reportName: 'Cucumber HTML Report'
-                ])
-            }
-        }
     }
 
     post {
         always {
-            emailext (
-                subject: "Build Result: ${currentBuild.fullDisplayName}",
-                body: """
-                Build: ${env.BUILD_URL}
-                Result: ${currentBuild.currentResult}
-                Duration: ${currentBuild.durationString}
-
-                Test Reports: ${env.BUILD_URL}cucumber-html-reports/
-                """,
-                to: "your-email@example.com"
-            )
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'target/cucumber-reports',
+                reportFiles: 'cucumber.html',
+                reportName: 'Cucumber HTML Report'
+            ])
         }
     }
 }
