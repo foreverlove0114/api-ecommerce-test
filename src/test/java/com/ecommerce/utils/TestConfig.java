@@ -10,20 +10,24 @@ public class TestConfig {
      * 🌐 基础URL - 被测系统的入口地址
      * 所有HTTP请求都会基于这个URL发送
      */
-    public static final String BASE_URL = "http://localhost:5000/";
+    // 从环境变量读取配置，支持CI/CD动态配置
+    public static final String BASE_URL = System.getProperty("base.url",
+            System.getenv().getOrDefault("BASE_URL", "http://localhost:5000/"));
 
     /**
      * ⏱️ 超时时间 - HTTP请求的最大等待时间（毫秒）
      * 防止测试因网络问题无限期挂起
      */
-    public static final int TIMEOUT = 10000; //10 seconds
+    public static final int TIMEOUT = Integer.parseInt(
+            System.getProperty("timeout",
+                    System.getenv().getOrDefault("TIMEOUT", "10000")));
 
     /**
      * 👤 测试用户数据配置 - 封装所有测试用户的预设信息
      * 使用静态内部类组织相关配置，提高代码可读性
      */
     public static class TestUser{
-        public static final String EMAIL = "testuser1234@example.com";
+        public static final String EMAIL = generateTestEmail();
         public static final String PASSWORD = "testpass1234";
         public static final String FIRST_NAME = "Test";
         public static final String LAST_NAME = "User";
@@ -34,6 +38,11 @@ public class TestConfig {
         public static final String STATE = "TS";
         public static final String COUNTRY = "TestCountry";
         public static final String PHONE = "1234567890";
+    }
+
+    private static String generateTestEmail() {
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        return "testuser_" + timestamp + "@example.com";
     }
 
     /**

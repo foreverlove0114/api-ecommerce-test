@@ -81,6 +81,17 @@
           <includes>
             <include>**/*TestRunner.java</include>
           </includes>
+          <systemProperties>
+            <property>
+              <name>cucumber.plugin</name>
+              <value>
+                pretty,
+                html:target/cucumber-reports/cucumber.html,
+                json:target/cucumber-reports/cucumber.json
+              </value>
+            </property>
+          </systemProperties>
+          <argLine>-Dfile.encoding=UTF-8</argLine>
         </configuration>
       </plugin>
 

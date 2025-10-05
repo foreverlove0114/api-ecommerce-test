@@ -38,7 +38,7 @@ public class TestRunner extends AbstractTestNGCucumberTests {
      * @return 返回所有需要执行的测试场景数据
      */
     @Override
-    @DataProvider(parallel = false)
+    @DataProvider(parallel = true)
     public Object[][] scenarios(){
         // 🔄 调用父类实现 - 自动扫描并返回所有Feature文件中的测试场景
         // 父类已经实现了复杂的场景发现和数据处理逻辑
